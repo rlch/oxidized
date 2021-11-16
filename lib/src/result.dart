@@ -1,6 +1,8 @@
 //
 // Copyright (c) 2020 Nathan Fiedler
 //
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import './option.dart';
 
@@ -28,6 +30,19 @@ abstract class Result<T extends Object, E extends Object> extends Equatable {
       return Ok(catching());
     } catch (e) {
       return Err(e as E);
+    }
+  }
+
+  static Future<Result<T, E>> asyncOf<T extends Object, E extends Object>(FutureOr<T> Function() catching) async {
+    final value = catching();
+    if (value is Future<T>) {
+      try {
+        return Ok(await value);
+      } catch (e) {
+        return Err(e as E);
+      }
+    } else {
+      return Future.value(Result<T, E>.of(() => catching() as T));
     }
   }
 
@@ -243,8 +258,7 @@ class Err<T extends Object, E extends Object> extends Result<T, E> {
   R match<R>(R Function(T) okop, R Function(E) errop) => errop(_err);
 
   @override
-  R when<R>({required R Function(T) ok, required R Function(E) err}) =>
-      err(_err);
+  R when<R>({required R Function(T) ok, required R Function(E) err}) => err(_err);
 
   @override
   Result<U, F> fold<U extends Object, F extends Object>(
